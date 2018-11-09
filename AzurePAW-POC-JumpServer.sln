@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28010.2003
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{151D2E53-A2C4-4D7D-83FE-D05416EBD58E}") = "AzurePAW-POC-JumpServer", "AzurePAW-POC-JumpServer\AzurePAW-POC-JumpServer.deployproj", "{06187A9D-1FF3-499A-9BFF-F6F0C68DE498}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{06187A9D-1FF3-499A-9BFF-F6F0C68DE498}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06187A9D-1FF3-499A-9BFF-F6F0C68DE498}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06187A9D-1FF3-499A-9BFF-F6F0C68DE498}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06187A9D-1FF3-499A-9BFF-F6F0C68DE498}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {24CF580C-9CEE-4B30-A6BB-894E16105702}
+	EndGlobalSection
+EndGlobal
