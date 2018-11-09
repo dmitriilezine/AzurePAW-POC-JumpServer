@@ -1,8 +1,170 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
-  "parameters": {},
-  "variables": {},
-  "resources": [],
+  "parameters": {
+
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Administrator of the new VMs and Domain"
+      },
+      "defaultValue": "labadmin"
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password for the Administrator account of the new VMs and Domain. If you do not change it, then it will look like this: Subscription#SUBSCRIPTIONID"
+      },
+      "defaultValue": "[concat('Subscription#',subscription().subscriptionId)]"
+    },
+    "VirtualMachineSize": {
+      "type": "string",
+      "allowedValues": [
+        "Standard_DS12_v2",
+        "Standard_A2"
+      ],
+      "metadata": {
+        "description": "VM Size. The bigger it is, the more $ you will spend."
+      },
+      "defaultValue": "Standard_A2"
+    },
+    "existingVirtualNetworkName": {
+      "type": "string",
+      "defaultValue": "Add vNet Name where this VM will be deployed to",
+      "metadata": {
+        "description": "Specify the name for the vNet to whcih this swerver will be deployed."
+      }
+    },
+    "existingVirtualNetworkResourceGroup": {
+      "type": "string",
+      "defaultValue": "Add vNet RG Name",
+      "metadata": {
+        "description": "Name of the existing VNET resource group"
+      }
+    },
+    "jumpServerSubnetName": {
+      "type": "string",
+      "defaultValue": "Add Subnet Name where this Jump server will be deployed in vNet -> FrontEnd",
+      "metadata": {
+        "description": "Name of the subnet in the virtual network you want to put this VM"
+      }
+    },
+    "VMName": {
+      "type": "string",
+      "metadata": {
+        "description": "Must be compliant with Windows Server naming convention"
+      },
+      "defaultValue": "JumpServer"
+    },
+    "serverIPAddress": {
+      "type": "string",
+      "defaultValue": "10.0.2.4",
+      "metadata": {
+        "description": "Specify IP addess of the server in that target subnet"
+      }
+    }
+
+  },
+  "variables": {
+    "assetLocation": "https://raw.githubusercontent.com/dmitriilezine/AzurePAW-POC-JumpServer/master/AzurePAW-POC-JumpServer",
+
+    "VMSize": "[parameters('VirtualMachineSize')]",
+    "OSVersion": "2016-Datacenter",
+
+    "subnetResourceID": "[resourceId(parameters('existingVirtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks/subnets', parameters('existingVirtualNetworkName'), parameters('jumpServerSubnetName'))]",
+    "ServerIpAddress": "[parameters('serverIPAddress')]",
+
+    "ServerTemplateURL": "[concat(variables('assetLocation'),'/data/ServerVm.json')]",
+    "publicIPTemplateURL": "[concat(variables('assetLocation'),'/data/publicIP.json')]",
+    "VMName": "[parameters('VMName')]",
+
+
+    "imageOffer": "WindowsServer",
+    "imagePublisher": "MicrosoftWindowsServer",
+    "dnsNICName": "[concat('JumpServer-Nic',resourceGroup().name)]",
+
+    "dnsPrefix": "[tolower(concat(resourceGroup().name,'jump'))]",
+
+    "publicIPAddressName": "[concat('JumpServerPublicIP',resourceGroup().name)]",
+    "publicIPAddressID": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]",
+    "publicLBName": "[concat('JumpServer-PLB',resourceGroup().name)]",
+    "publiclbID": "[resourceId('Microsoft.Network/loadBalancers',variables('publicLBName'))]",
+    "lbFE": "[concat('JumServerLBFE',resourceGroup().name)]",
+    "publiclbFEConfigID": "[concat(variables('publiclbID'),'/frontendIPConfigurations/',variables('lbFE'))]",
+    "rpdNAT": "[concat('JumServerRDPNAT',resourceGroup().name)]",
+    "rdpNATRuleID": "[concat(variables('publiclbID'),'/inboundNatRules/',variables('rpdNAT'))]",
+    "rdpPort": "3389",
+
+    "deployJumpServerVM": "DeployJumpServerVM",
+    "deployJumpServerVMId": "[concat('Microsoft.Resources/deployments/', variables('deployJumpServerVM'))]",
+    "deployPublicIP": "DeployPublicIP",
+    "deployPublicIPId": "[concat('Microsoft.Resources/deployments/', variables('deployPublicIP'))]"
+
+  },
+  "resources": [
+    {
+      "name": "[variables('deployPublicIP')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": { "uri": "[variables('publicIPTemplateURL')]" },
+        "parameters": {
+          "publicIPAddressName": { "value": "[variables('publicIPAddressName')]" },
+          "dnsPrefix": { "value": "[variables('dnsPrefix')]" },
+          "publicLBName": { "value": "[variables('publicLBName')]" },
+          "lbFE": { "value": "[variables('lbFE')]" },
+          "rpdNAT": { "value": "[variables('rpdNAT')]" },
+          "rdpPort": { "value": "[variables('rdpPort')]" }
+        }
+      }
+    },
+    {
+      "name": "[variables('deployJumpServerVM')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2015-01-01",
+      "dependsOn": [
+        "[variables('deployPublicIP')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[variables('ServerTemplateURL')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "subnetResourceID": {
+            "value": "[variables('subnetResourceID')]"
+          },
+          "windowsImageSKU": {
+            "value": "[variables('OSVersion')]"
+          },
+          "vmName": {
+            "value": "[variables('VMName')]"
+          },
+          "vmSize": {
+            "value": "[variables('VMSize')]"
+          },
+          "nicName": {
+            "value": "[variables('dnsNICName')]"
+          },
+          "primaryIpAddress": {
+            "value": "[variables('ServerIpAddress')]"
+          },
+          "adRDPNATRuleID": {
+            "value": "[variables('rdpNATRuleID')]"
+          }
+        }
+      }
+    }
+
+
+  ],
   "outputs": {}
 }
